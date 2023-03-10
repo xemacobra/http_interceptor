@@ -299,7 +299,7 @@ class InterceptedClient extends BaseClient {
       }
     }
 
-    print("[RESPONSE][$_retryCount] ${response.request.url} | ${response.statusCode}");
+    print("[RESPONSE][$_retryCount] ${response.request?.url} | ${response.statusCode}");
     _retryCount = 0;
     return response;
   }
