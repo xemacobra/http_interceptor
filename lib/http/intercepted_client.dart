@@ -281,7 +281,7 @@ class InterceptedClient extends BaseClient {
 
       response =
           request is Request ? await Response.fromStream(stream) : stream;
-      print("[REQUEST][$_retryCount] ${request.url} | ${request.headers['Authorization']}");
+      print("[REQUEST][$_retryCount] ${request.url} | ${(request.headers['Authorization'] ?? "Bearer EMPTYYYYY").substring(0, 12)}");
       if (retryPolicy != null &&
           retryPolicy!.maxRetryAttempts > _retryCount &&
           await retryPolicy!.shouldAttemptRetryOnResponse(response)) {
