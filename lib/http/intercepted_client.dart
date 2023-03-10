@@ -281,7 +281,7 @@ class InterceptedClient extends BaseClient {
 
       response =
           request is Request ? await Response.fromStream(stream) : stream;
-      log("[REQUEST][$_retryCount] ${request.url} | ${request.headers['Authorization'].substring(0, 6)}");
+      print("[REQUEST][$_retryCount] ${request.url} | ${request.headers['Authorization'].substring(0, 6)}");
       if (retryPolicy != null &&
           retryPolicy!.maxRetryAttempts > _retryCount &&
           await retryPolicy!.shouldAttemptRetryOnResponse(response)) {
@@ -299,7 +299,7 @@ class InterceptedClient extends BaseClient {
       }
     }
 
-    log("[RESPONSE][$_retryCount][R] ${ResponseData.fromHttpResponse(response).url} | ${ResponseData.fromHttpResponse(response).statusCode}");
+    print("[RESPONSE][$_retryCount] ${response.url} | ${response.statusCode}");
     _retryCount = 0;
     return response;
   }
