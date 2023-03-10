@@ -266,38 +266,38 @@ class InterceptedClient extends BaseClient {
 
   /// Attempts to perform the request and intercept the data
   /// of the response
-  Future<BaseResponse> _attemptRequest(BaseRequest request) async {
-    BaseResponse response;
+  Future<Response> _attemptRequest(Request request) async {
+    var response;
     try {
       // Intercept request
       final interceptedRequest = await _interceptRequest(request);
 
       var stream = requestTimeout == null
-          ? await _inner.send(interceptedRequest)
-          : await _inner
-              .send(interceptedRequest)
-              .timeout(requestTimeout!, onTimeout: onRequestTimeout);
-
-      response =
-          request is Request ? await Response.fromStream(stream) : stream;
-
+          ? await send(interceptedRequest)
+          : await send(interceptedRequest).timeout(requestTimeout!);
+      log("[REQUEST][$_retryCount] ${request.url} | ${request.headers['Authorization'].substring(0, 6)}");
+      response = await Response.fromStream(stream);
       if (retryPolicy != null &&
           retryPolicy!.maxRetryAttempts > _retryCount &&
-          await retryPolicy!.shouldAttemptRetryOnResponse(response)) {
+          await retryPolicy!.shouldAttemptRetryOnResponse(
+              ResponseData.fromHttpResponse(response))) {
         _retryCount += 1;
+        log("[REQUEST][$_retryCount][R] ${request.url} | ${request.headers['Authorization'].substring(0, 6)}");
         return _attemptRequest(request);
       }
     } on Exception catch (error) {
       if (retryPolicy != null &&
           retryPolicy!.maxRetryAttempts > _retryCount &&
-          await retryPolicy!.shouldAttemptRetryOnException(error, request)) {
+          retryPolicy!.shouldAttemptRetryOnException(error)) {
         _retryCount += 1;
+        log("[REQUEST][$_retryCount][E] ${request.url} | ${request.headers['Authorization'].substring(0, 6)}");
         return _attemptRequest(request);
       } else {
         rethrow;
       }
     }
 
+    log("[RESPONSE][$_retryCount][R] ${ResponseData.fromHttpResponse(response).url} | ${ResponseData.fromHttpResponse(response).statusCode}");
     _retryCount = 0;
     return response;
   }
