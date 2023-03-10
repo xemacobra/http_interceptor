@@ -266,31 +266,32 @@ class InterceptedClient extends BaseClient {
 
   /// Attempts to perform the request and intercept the data
   /// of the response
-  Future<Response> _attemptRequest(Request request) async {
-    var response;
+  Future<BaseResponse> _attemptRequest(BaseRequest request) async {
+    BaseResponse response;
     try {
       // Intercept request
       final interceptedRequest = await _interceptRequest(request);
 
       var stream = requestTimeout == null
-          ? await send(interceptedRequest)
-          : await send(interceptedRequest).timeout(requestTimeout!);
+          ? await _inner.send(interceptedRequest)
+          : await _inner
+              .send(interceptedRequest)
+              .timeout(requestTimeout!, onTimeout: onRequestTimeout);
+
+      response =
+          request is Request ? await Response.fromStream(stream) : stream;
       log("[REQUEST][$_retryCount] ${request.url} | ${request.headers['Authorization'].substring(0, 6)}");
-      response = await Response.fromStream(stream);
       if (retryPolicy != null &&
           retryPolicy!.maxRetryAttempts > _retryCount &&
-          await retryPolicy!.shouldAttemptRetryOnResponse(
-              ResponseData.fromHttpResponse(response))) {
+          await retryPolicy!.shouldAttemptRetryOnResponse(response)) {
         _retryCount += 1;
-        log("[REQUEST][$_retryCount][R] ${request.url} | ${request.headers['Authorization'].substring(0, 6)}");
         return _attemptRequest(request);
       }
     } on Exception catch (error) {
       if (retryPolicy != null &&
           retryPolicy!.maxRetryAttempts > _retryCount &&
-          retryPolicy!.shouldAttemptRetryOnException(error)) {
+          await retryPolicy!.shouldAttemptRetryOnException(error, request)) {
         _retryCount += 1;
-        log("[REQUEST][$_retryCount][E] ${request.url} | ${request.headers['Authorization'].substring(0, 6)}");
         return _attemptRequest(request);
       } else {
         rethrow;
@@ -301,7 +302,7 @@ class InterceptedClient extends BaseClient {
     _retryCount = 0;
     return response;
   }
-
+  
   /// This internal function intercepts the request.
   Future<BaseRequest> _interceptRequest(BaseRequest request) async {
     BaseRequest interceptedRequest = request.copyWith();
